@@ -3,6 +3,9 @@ import { Octree } from 'three/examples/jsm/math/Octree'
 import { OctreeHelper } from 'three/examples/jsm/helpers/OctreeHelper'
 import * as THREE from 'three'
 
+
+
+
 export default class octreeCollision {
   constructor(camera, needCollision) {
     this.camera = camera
