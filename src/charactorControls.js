@@ -34,10 +34,10 @@ export default class CharacterControls {
   }
 
 
-  switchRunToggle () {
+  switchRunToggle() {
     this.toggleRun = !this.toggleRun
   }
-  update (delta) {
+  update(delta) {
     let play = ''
     const directionPressed = DIRECTIONS.some(key => this.keyState[key] === true)
     if (this.toggleRun && directionPressed) {
@@ -55,9 +55,9 @@ export default class CharacterControls {
       this.currentAction = play
     }
     this.mixer.update(delta)
+   
 
-
-    if (this.currentAction === 'Run' || this.currentAction === 'Walk') {
+    if (this.currentAction === 'Run' || this.currentAction === 'Walk' || (this.currentAction === 'Idle' && this.keyState['Space'] === true) || !this.player?.onFloor ) {
       // 计算相机和模型之间的夹角
       const angleCameraDirection = Math.atan2(
         (this.camera.position.x - this.model.position.x),
@@ -86,7 +86,21 @@ export default class CharacterControls {
       // 移动摄像机和物体
 
       if (this.isCollision) {
+        let damping = Math.exp(-4 * delta) - 1
+        if (!this.player.onFloor) {
+          this.player.velocity.y -= this.GRAVITY * delta
+          damping *= 0.1
+        }
+        if(this.player.onFloor){
+          if (this.keyState['Space']) {
+            this.player.velocity.y = 10
+          }
+        }
+       
+        this.player.velocity.addScaledVector(this.player.velocity, damping)
+        const deltaPosition = this.player.velocity.clone().multiplyScalar(delta)
         const speedDelta = this.walkDirection.multiplyScalar(velocity * delta)
+        speedDelta.add(deltaPosition)
 
         this.model.position.add(speedDelta)
         this.camera.position.add(speedDelta)
@@ -101,7 +115,7 @@ export default class CharacterControls {
     }
 
   }
-  playerCollisions () {
+  playerCollisions() {
     // 获取碰撞检测的结果
     const result = this.worldOctree.capsuleIntersect(this.player.geometry)
     if (result) {
@@ -131,19 +145,20 @@ export default class CharacterControls {
     }
   }
 
-  initEvent () {
+  initEvent() {
     document.addEventListener('keydown', (e) => {
       if (e.shiftKey) {
         this.switchRunToggle()
       }
       this.keyState[e.code] = true
+      
     })
 
     document.addEventListener('keyup', (e) => {
       this.keyState[e.code] = false
     })
   }
-  directionOffset (keyPressed) {
+  directionOffset(keyPressed) {
     let offset = 0  //w
     if (keyPressed[`KeyW`]) {
       if (keyPressed[`KeyA`]) {
@@ -168,12 +183,12 @@ export default class CharacterControls {
     return offset
   }
 
-  initOctree (needCollision) {
+  initOctree(needCollision) {
     this.isCollision = true
     this.GRAVITY = 30
     // player
     this.player = {
-      geometry: new Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35),
+      geometry: new Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1.35, 0), 0.35),
       // 速度
       velocity: new THREE.Vector3(),
       direction: new THREE.Vector3(),
