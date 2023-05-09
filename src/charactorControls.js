@@ -71,18 +71,24 @@ export default class CharacterControls {
       const rotateQuarternion = new THREE.Quaternion()
       rotateQuarternion.setFromAxisAngle(this.rotateAngle, angleCameraDirection + offset)
       //线性旋转 有过渡
-      this.model.quaternion.rotateTowards(rotateQuarternion, 0.2)
-
+      if(this.isCollision && this.player.onFloor){
+        this.model.quaternion.rotateTowards(rotateQuarternion, 0.2)
+      }
+      
+      
+      
 
       // 计算方向
+      
       this.camera.getWorldDirection(this.walkDirection)
+
       this.walkDirection.y = 0
       this.walkDirection.normalize()
       this.walkDirection.applyAxisAngle(this.rotateAngle, offset)
 
 
       //行径速率
-      const velocity = this.currentAction === 'Run' ? this.runVelocity : this.walkVelocity
+      let velocity = this.currentAction === 'Run' ? this.runVelocity : this.walkVelocity
       // 移动摄像机和物体
 
       if (this.isCollision) {
@@ -96,19 +102,19 @@ export default class CharacterControls {
             this.player.velocity.y = 10
           }
         }
+        if(!this.player.onFloor && this.currentAction === 'Idle') velocity = 0
        
         this.player.velocity.addScaledVector(this.player.velocity, damping)
         const deltaPosition = this.player.velocity.clone().multiplyScalar(delta)
         const speedDelta = this.walkDirection.multiplyScalar(velocity * delta)
         speedDelta.add(deltaPosition)
-
         this.model.position.add(speedDelta)
         this.camera.position.add(speedDelta)
-        const Vector3 = new THREE.Vector3(this.model.position.x, this.model.position.y + 1, this.model.position.z)
-        this.orbitControl.target = Vector3
+        // const Vector3 = new THREE.Vector3(this.model.position.x, this.model.position.y + 1, this.model.position.z)
+        this.orbitControl.target.copy(this.model.position)
 
         this.player.geometry.translate(speedDelta)
-        /* 在位移后进行碰撞检测 */
+        // /* 在位移后进行碰撞检测 */
         this.playerCollisions()
       }
 
@@ -124,13 +130,13 @@ export default class CharacterControls {
       if (!this.player.onFloor) {
         // Vector3.addScaledVector（v,s)将v和s的倍数添加到此向量
 
-        this.player.velocity.addScaledVector(result.normal, -result.normal.dot(this.player.velocity))
-        // const speedProjection = this.player.velocity.dot(result.normal)
-        // const coefficient = 0.5 // 反作用力与速度大小的比例系数
-        // const reactionForce = result.normal.multiplyScalar(-speedProjection * coefficient)
+        // this.player.velocity.addScaledVector(result.normal, -result.normal.dot(this.player.velocity))
+        const speedProjection = this.player.velocity.dot(result.normal)
+        const coefficient = 0.5 // 反作用力与速度大小的比例系数
+        const reactionForce = result.normal.multiplyScalar(-speedProjection * coefficient)
 
-        // // 将计算出的反作用力应用到玩家的速度向量上
-        // this.player.velocity.add(reactionForce)
+        // 将计算出的反作用力应用到玩家的速度向量上
+        this.player.velocity.add(reactionForce)
       }
       /* 
       其作用是将法向量(result.normal)按照最小平移向量(result.depth)的大小进行缩放，以得到一个表示最小平移距离的向量。
@@ -180,6 +186,7 @@ export default class CharacterControls {
     } else if (keyPressed[`KeyD`]) {
       offset = -Math.PI / 2 //d
     }
+    
     return offset
   }
 

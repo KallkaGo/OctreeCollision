@@ -71,7 +71,6 @@ scene.add(camera)
 Controls
 */
 const controls = new OrbitControls(camera, canvas)
-controls.target.set(8, 0, 0)
 controls.enableDamping = true
 
 
@@ -98,6 +97,7 @@ gltfLoader.load('/Soldier.glb', (gltf) => {
         if (object.isMesh) object.castShadow = true
     })
     model.position.set(8, 0, 0)
+    controls.target.copy(model.position)
     scene.add(model)
     const gltfAnimations = gltf.animations
     const mixer = new THREE.AnimationMixer(model)
