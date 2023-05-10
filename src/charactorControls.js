@@ -14,6 +14,7 @@ export default class CharacterControls {
   walkVelocity = 2
   //是否开启碰撞
   isCollision = false
+  isRotate = false
 
 
   constructor(model, mixer, animationsMap, orbitControl, camera, currentAction) {
@@ -34,10 +35,10 @@ export default class CharacterControls {
   }
 
 
-  switchRunToggle() {
+  switchRunToggle () {
     this.toggleRun = !this.toggleRun
   }
-  update(delta) {
+  update (delta) {
     let play = ''
     const directionPressed = DIRECTIONS.some(key => this.keyState[key] === true)
     if (this.toggleRun && directionPressed) {
@@ -55,9 +56,9 @@ export default class CharacterControls {
       this.currentAction = play
     }
     this.mixer.update(delta)
-   
 
-    if (this.currentAction === 'Run' || this.currentAction === 'Walk' || (this.currentAction === 'Idle' && this.keyState['Space'] === true) || !this.player?.onFloor ) {
+
+    if (this.currentAction === 'Run' || this.currentAction === 'Walk' || (this.currentAction === 'Idle' && this.keyState['Space'] === true) || !this.player?.onFloor) {
       // 计算相机和模型之间的夹角
       const angleCameraDirection = Math.atan2(
         (this.camera.position.x - this.model.position.x),
@@ -71,15 +72,15 @@ export default class CharacterControls {
       const rotateQuarternion = new THREE.Quaternion()
       rotateQuarternion.setFromAxisAngle(this.rotateAngle, angleCameraDirection + offset)
       //线性旋转 有过渡
-      if(this.isCollision && this.player.onFloor){
+      if (this.isCollision && this.player.onFloor || this.isRotate) {
         this.model.quaternion.rotateTowards(rotateQuarternion, 0.2)
       }
-      
-      
-      
+
+
+
 
       // 计算方向
-      
+
       this.camera.getWorldDirection(this.walkDirection)
 
       this.walkDirection.y = 0
@@ -97,21 +98,21 @@ export default class CharacterControls {
           this.player.velocity.y -= this.GRAVITY * delta
           damping *= 0.1
         }
-        if(this.player.onFloor){
+        if (this.player.onFloor) {
           if (this.keyState['Space']) {
             this.player.velocity.y = 10
           }
         }
-        if(!this.player.onFloor && this.currentAction === 'Idle') velocity = 0
-       
+        if (!this.player.onFloor && this.currentAction === 'Idle') velocity = 0
+
         this.player.velocity.addScaledVector(this.player.velocity, damping)
         const deltaPosition = this.player.velocity.clone().multiplyScalar(delta)
         const speedDelta = this.walkDirection.multiplyScalar(velocity * delta)
         speedDelta.add(deltaPosition)
         this.model.position.add(speedDelta)
         this.camera.position.add(speedDelta)
-        // const Vector3 = new THREE.Vector3(this.model.position.x, this.model.position.y + 1, this.model.position.z)
-        this.orbitControl.target.copy(this.model.position)
+        const Vector3 = new THREE.Vector3(this.model.position.x, this.model.position.y + 1, this.model.position.z)
+        this.orbitControl.target.copy(Vector3)
 
         this.player.geometry.translate(speedDelta)
         // /* 在位移后进行碰撞检测 */
@@ -121,11 +122,12 @@ export default class CharacterControls {
     }
 
   }
-  playerCollisions() {
+  playerCollisions () {
     // 获取碰撞检测的结果
     const result = this.worldOctree.capsuleIntersect(this.player.geometry)
     if (result) {
       this.player.onFloor = result.normal.y > 0
+      if( this.player.onFloor) this.isRotate = false
       // 添加反作用力
       if (!this.player.onFloor) {
         // Vector3.addScaledVector（v,s)将v和s的倍数添加到此向量
@@ -151,20 +153,21 @@ export default class CharacterControls {
     }
   }
 
-  initEvent() {
+  initEvent () {
     document.addEventListener('keydown', (e) => {
       if (e.shiftKey) {
         this.switchRunToggle()
       }
+      if (e.code !== 'Space') this.isRotate = !this.isRotate
       this.keyState[e.code] = true
-      
+
     })
 
     document.addEventListener('keyup', (e) => {
       this.keyState[e.code] = false
     })
   }
-  directionOffset(keyPressed) {
+  directionOffset (keyPressed) {
     let offset = 0  //w
     if (keyPressed[`KeyW`]) {
       if (keyPressed[`KeyA`]) {
@@ -186,11 +189,11 @@ export default class CharacterControls {
     } else if (keyPressed[`KeyD`]) {
       offset = -Math.PI / 2 //d
     }
-    
+
     return offset
   }
 
-  initOctree(needCollision) {
+  initOctree (needCollision) {
     this.isCollision = true
     this.GRAVITY = 30
     // player
