@@ -1,16 +1,12 @@
-# Three.js Journey
+# Three.js  八叉树碰撞检测以及TPP FPP控制器
 
-## Setup
-Download [Node.js](https://nodejs.org/en/download/).
-Run this followed commands:
+#### 阶段目标
 
-``` bash
-# Install dependencies (only the first time)
-npm install
+**~~1.实现Octree碰撞检测~~**
 
-# Run the local server at localhost:8080
-npm run dev
+~~**2.实现FPP控制器**~~
 
-# Build for production in the dist/ directory
-npm run build
-```
+**~~3.实现TPP控制器~~** **=> 目前关于TPP控制器的实现方案还有很大的缺陷 需要添加很多边界判断来不让人物发生预期之外的动作**
+
+
+
