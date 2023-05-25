@@ -64,6 +64,7 @@ scene.environment = env
 // Base camera
 const camera = new THREE.PerspectiveCamera(45, sizes.width / sizes.height, 0.1, 100)
 camera.position.set(6, 4, 5)
+
 // camera.rotation.order = 'YZX'
 scene.add(camera)
 
@@ -74,31 +75,47 @@ const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 
 
+/* 
+RayCaster
+*/
+const raycaster = new THREE.Raycaster()
+
+
 
 
 /**
  * Model
  */
-let sceneModel = null
-gltfLoader.load('/gallery.glb', (gltf) => {
-    gltf.scene.scale.set(2, 2, 2)
-    sceneModel = gltf.scene
-    scene.add(sceneModel)
-    TppControl.initOctree(sceneModel)
-    // scene.add(TppControl.helper)
+const modelArr = []
 
-    // collision = new octreeCollision(camera, gltf.scene)
-    // scene.add(collision.user)
-})
+let sceneModel = null
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ side: THREE.DoubleSide }))
+floor.rotation.x = -Math.PI / 2
+floor.position.y -= 0.01
+scene.add(floor)
+modelArr.push(floor)
+console.log(scene.children[1] === floor)
+// gltfLoader.load('/gallery.glb', (gltf) => {
+//     gltf.scene.scale.set(2, 2, 2)
+//     sceneModel = gltf.scene
+//     scene.add(sceneModel)
+//     TppControl.initOctree(sceneModel)
+//     // scene.add(TppControl.helper)
+
+//     // collision = new octreeCollision(camera, gltf.scene)
+//     // scene.add(collision.user)
+// })
 
 gltfLoader.load('/Soldier.glb', (gltf) => {
     const model = gltf.scene
     model.traverse(function (object) {
-        if (object.isMesh) object.castShadow = true
+        if (object.isMesh) object.castShadow = false
     })
     model.position.set(8, 0, 0)
-    controls.target.copy(model.position)
+
+    controls.target.set(8, 1, 0)
     scene.add(model)
+
     const gltfAnimations = gltf.animations
     const mixer = new THREE.AnimationMixer(model)
     const animationsMap = new Map()
@@ -106,10 +123,10 @@ gltfLoader.load('/Soldier.glb', (gltf) => {
         animationsMap.set(a.name, mixer.clipAction(a))
     })
     TppControl = new CharacterControls(model, mixer, animationsMap, controls, camera, 'Idle')
-
-
-
+    TppControl.initOctree(floor)
 })
+
+
 
 /* 
 helper
@@ -152,6 +169,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  */
 const clock = new THREE.Clock()
 
+
 const tick = () => {
     const deltaTime = Math.min(0.05, clock.getDelta())
 
@@ -160,7 +178,25 @@ const tick = () => {
     //     collision.uodatePlayer(deltaTime)
     // }
 
-    if (TppControl) TppControl.update(deltaTime)
+    if (TppControl) {
+
+        const rayDirection = new THREE.Vector3()
+        rayDirection.subVectors(camera.position, controls.target).normalize()
+        raycaster.set(controls.target, rayDirection)
+        raycaster.near = 0.1
+        raycaster.far = camera.position.distanceTo(controls.target)
+        // Test
+        const intersects = raycaster.intersectObjects(modelArr, true)
+
+        if (intersects.length > 0) {
+            const point = new THREE.Vector3().copy(intersects[0].point)
+            camera.position.copy(point)
+
+        }
+
+        TppControl.update(deltaTime)
+
+    }
 
 
 
