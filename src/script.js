@@ -10,7 +10,7 @@ import CharacterControls from './charactorControls'
 CollisionControl
 */
 let TppControl
-
+let isCollide = false
 
 /**
  * Sizes
@@ -72,7 +72,14 @@ scene.add(camera)
 Controls
 */
 const controls = new OrbitControls(camera, canvas)
+const startverticalRotation = controls.getPolarAngle()
+console.log(controls.dollyOut)
+controls.maxDistance = 10
+controls.minDistance = 2
+controls.maxPolarAngle = Math.PI
 controls.enableDamping = true
+window.controls = controls
+
 
 
 /* 
@@ -89,7 +96,7 @@ const raycaster = new THREE.Raycaster()
 const modelArr = []
 
 let sceneModel = null
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ side: THREE.DoubleSide }))
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshNormalMaterial())
 floor.rotation.x = -Math.PI / 2
 floor.position.y -= 0.01
 scene.add(floor)
@@ -151,6 +158,24 @@ window.addEventListener('resize', () => {
 
 
 
+/* 
+
+Listener
+*/
+
+const { lerp, inverseLerp, clamp } = THREE.MathUtils
+controls.addEventListener('change', () => {
+    let verticalRotation = controls.getPolarAngle()
+    if (isCollide) {
+        controls.minDistance = lerp(6, 2, clamp(inverseLerp(startverticalRotation, Math.PI, verticalRotation), 0, 1))
+        if (controls.minDistance === 10) {
+            controls.minDistance = 2
+        }
+    }
+
+
+})
+
 
 
 /**
@@ -186,14 +211,15 @@ const tick = () => {
         raycaster.near = 0.1
         raycaster.far = camera.position.distanceTo(controls.target)
         // Test
-        const intersects = raycaster.intersectObjects(modelArr, true)
+        const intersects = raycaster.intersectObjects(modelArr)
 
         if (intersects.length > 0) {
             const point = new THREE.Vector3().copy(intersects[0].point)
             camera.position.copy(point)
-
+            isCollide = true
+        } else {
+            isCollide = false
         }
-
         TppControl.update(deltaTime)
 
     }
